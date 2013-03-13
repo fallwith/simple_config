@@ -1,0 +1,40 @@
+#!/bin/sh
+owd=$PWD
+
+if command -v rvm >/dev/null 2>&1; then
+  echo "'rvm' command detected. This script is designed for use by non-RVM based shells"
+  exit
+fi
+
+if [ "$(uname)" == "Darwin" ]; then readlink="stat"; else readlink="readlink"; fi
+project_root=$(cd -P "$(dirname "$($readlink -f $0)")/.." && echo $PWD)
+
+if [ $(command -v rbenv) ]; then
+  ruby_version="$(cat "$project_root/.ruby-version")"
+  echo "Checking for rbenv instance of Ruby $ruby_version..."
+  if ! $(rbenv versions 2>&1 | grep -v "not installed" | grep -q "$ruby_version"); then
+    echo "Missing. Installing..."
+    rbenv install "$ruby_version"
+    rbenv rehash
+    gem install bundler --no-rdoc --no-ri
+    rbenv rehash
+  else
+    echo "Found."
+  fi
+elif [ $(command -v ruby) ]; then
+  echo "Using ruby $(ruby -v)"
+  if [ ! $(command -v bundle) ]; then
+    echo "Bundler not found. Installing..."
+    gem install bundler
+  fi
+fi
+
+echo "Bundling gems..."
+cd "$project_root"
+bundle install --binstubs="$project_root/.binstubs" | grep -viE 'using|complete|cache' | sed '/^$/d'
+
+echo "Setup complete."
+if [ "$project_root" != "$owd" ]; then
+  cd "$owd"
+fi
+

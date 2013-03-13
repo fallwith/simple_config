@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+gemset=simple_config
+ruby_string=ruby-1.9.3-p385
+
+# verify / install the target Ruby version
+! rvm list strings | grep -q "$ruby_string" && rvm --verify-downloads 1 install $ruby_string
+
+# verify / create the target gemset, then initialize it
+env_string="${ruby_string}@${gemset}"
+gemset_loc="${rvm_path:-$HOME/.rvm}/environments/${env_string}"
+[ ! -e "$gemset_loc" ] && rvm --create "$env_string"
+[ -e "$gemset_loc" ] && \. "$gemset_loc"
+
+# verify / install Bundler and run 'bundle'
+! command -v bundle >/dev/null && gem install bundler
+bundle | grep -viE 'using|complete' | sed '/^$/d'
